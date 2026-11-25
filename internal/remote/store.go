@@ -69,6 +69,9 @@ type Meta struct {
 	Title  string `json:"title"`
 	Artist string `json:"artist"`
 	Album  string `json:"album"`
+	// Duration is the length in seconds, from the server: a song playing
+	// while it downloads can't always tell it (partial.go).
+	Duration int `json:"duration,omitempty"`
 }
 
 // Store es la caché de lo remoto, la misma para la interfaz y el servicio
@@ -78,8 +81,9 @@ type Store struct {
 	servers func() []config.Server
 
 	mu       sync.Mutex
-	inflight map[string]bool  // canciones bajándose
-	failed   map[string]error // la última que falló de cada una
+	inflight map[string]bool      // canciones bajándose
+	failed   map[string]error     // la última que falló de cada una
+	parts    map[string]*download // the downloads under way, to play them before they end (partial.go)
 	meta     map[string]map[string]Meta
 	metaAt   map[string]time.Time
 	// Los clientes con su sesión, y la configuración con que se crearon.
@@ -90,7 +94,7 @@ type Store struct {
 // NewStore prepara la caché en dataDir; servers da la configuración actual
 // (se vuelve a pedir: puede cambiar mientras corre).
 func NewStore(dataDir string, servers func() []config.Server) *Store {
-	return &Store{data: dataDir, servers: servers, inflight: map[string]bool{}, failed: map[string]error{},
+	return &Store{data: dataDir, servers: servers, inflight: map[string]bool{}, failed: map[string]error{}, parts: map[string]*download{},
 		meta: map[string]map[string]Meta{}, metaAt: map[string]time.Time{},
 		clients: map[string]Backend{}, clientCfg: map[string]config.Server{}}
 }
@@ -184,9 +188,10 @@ var exts = map[string]string{
 
 // fetch baja la canción a la caché.
 func (s *Store) fetch(server, id, path string) {
-	err := s.download(server, id)
+	err := s.download(server, id, path)
 	s.mu.Lock()
 	delete(s.inflight, path)
+	delete(s.parts, path)
 	if err != nil {
 		s.failed[path] = err
 		delete(s.clients, server) // por si caducó la sesión: la próxima vez, otra
@@ -194,7 +199,7 @@ func (s *Store) fetch(server, id, path string) {
 	s.mu.Unlock()
 }
 
-func (s *Store) download(server, id string) error {
+func (s *Store) download(server, id, path string) error {
 	c, srv, err := s.client(server)
 	if err != nil {
 		return err
@@ -219,11 +224,17 @@ func (s *Store) download(server, id string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	dl := &download{file: tmp, size: resp.ContentLength}
+	s.mu.Lock()
+	s.parts[path] = dl
+	s.mu.Unlock()
+	if _, err := io.Copy(&counter{f, dl}, resp.Body); err != nil {
+		dl.failed.Store(true)
 		f.Close()
 		_ = os.Remove(tmp)
 		return err
 	}
+	dl.done.Store(true)
 	f.Close()
 	if err := os.Rename(tmp, filepath.Join(dir, id+"."+ext)); err != nil {
 		return err

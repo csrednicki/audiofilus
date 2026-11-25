@@ -165,7 +165,7 @@ func (a *App) saveCatalog(src *remoteSource, cat catalog) {
 	}
 	meta := make(map[string]remote.Meta, len(cat.Songs))
 	for _, s := range cat.Songs {
-		meta[s.ID] = remote.Meta{Title: s.Title, Artist: s.Artist, Album: s.Album}
+		meta[s.ID] = remote.Meta{Title: s.Title, Artist: s.Artist, Album: s.Album, Duration: s.Duration}
 	}
 	_ = a.store.SaveMeta(src.srv.Name, meta)
 }
@@ -412,6 +412,7 @@ func (a *App) chooseServerType() {
 		{label: "Jellyfin / Emby", icon: "server", do: func() {
 			a.addServerFlow(config.Server{Name: "Jellyfin", Type: "jellyfin", URL: "http://:8096"})
 		}},
+		{label: "Plex", icon: "server", do: func() { a.plexFlow(config.Server{}) }},
 	}}
 }
 
@@ -420,12 +421,19 @@ func serverKind(srv config.Server) string {
 	if strings.EqualFold(srv.Type, "jellyfin") {
 		return "Jellyfin"
 	}
+	if strings.EqualFold(srv.Type, "plex") {
+		return "Plex"
+	}
 	return "Subsonic"
 }
 
 // addServerFlow pide nombre, dirección, usuario y contraseña (con lo que ya
 // haya en srv, para corregir) y prueba la conexión antes de guardarlo.
 func (a *App) addServerFlow(srv config.Server) {
+	if strings.EqualFold(srv.Type, "plex") {
+		a.plexFlow(srv) // Plex signs in on plex.tv instead
+		return
+	}
 	a.openPrompt(T("srv_name"), srv.Name, func(name string) {
 		srv.Name = name
 		a.openRawPrompt(T("srv_url"), srv.URL, false, func(u string) {
@@ -463,13 +471,29 @@ func (a *App) openServerFailed(srv config.Server, err error) {
 // qualities son las calidades de escucha que se pueden elegir, en orden.
 var qualities = []string{"", "320", "128", "96", "original"}
 
-// qualityLabel es cómo se ve una calidad.
-func qualityLabel(q string) string {
-	switch q {
-	case "":
-		return "MP3 192 kbps"
-	case "original":
+// plexQualities are Plex's: by default the original, like Plexamp, which
+// only converts if you pick a bitrate.
+var plexQualities = []string{"", "320", "192", "128", "96"}
+
+// serverQualities are the qualities of srv, and its current one in that list.
+func serverQualities(srv config.Server) ([]string, string) {
+	if strings.EqualFold(srv.Type, "plex") {
+		if srv.Quality == "original" {
+			return plexQualities, ""
+		}
+		return plexQualities, srv.Quality
+	}
+	return qualities, srv.Quality
+}
+
+// qualityLabel es cómo se ve la calidad de srv.
+func qualityLabel(srv config.Server) string {
+	_, q := serverQualities(srv)
+	switch {
+	case q == "original", q == "" && strings.EqualFold(srv.Type, "plex"):
 		return T("srv_original")
+	case q == "":
+		return "MP3 192 kbps"
 	}
 	return "MP3 " + q + " kbps"
 }
@@ -481,12 +505,12 @@ func (a *App) openServerMenu(i int) {
 	m.items = []menuItem{
 		{label: T("srv_test"), icon: "check", do: func() { a.pingServer(a.cfg.Servers[i], false) }},
 		{label: T("srv_quality"), icon: "speaker",
-			value: func() string { return qualityLabel(a.cfg.Servers[i].Quality) },
+			value: func() string { return qualityLabel(a.cfg.Servers[i]) },
 			do: func() {
-				q := a.cfg.Servers[i].Quality
-				for k, v := range qualities {
+				list, q := serverQualities(a.cfg.Servers[i])
+				for k, v := range list {
 					if v == q {
-						a.cfg.Servers[i].Quality = qualities[(k+1)%len(qualities)]
+						a.cfg.Servers[i].Quality = list[(k+1)%len(list)]
 						break
 					}
 				}

@@ -56,6 +56,35 @@ func (j *jellyfin) Scrobble(ctx context.Context, id string, at time.Time) error 
 	return j.call(ctx, http.MethodPost, fmt.Sprintf("/Users/%s/PlayedItems/%s?%s", j.user(), id, q.Encode()), nil, nil)
 }
 
+// SetFavorite: Plex has no favorites, so a favorite is 5 stars (rating 10,
+// like Plexamp's "love"). Unmarking it also removes the rating.
+func (p *plex) SetFavorite(ctx context.Context, id string, on bool) error {
+	r := 0
+	if on {
+		r = 5
+	}
+	return p.SetRating(ctx, id, r)
+}
+
+// SetRating rates the track 1 to 5 stars (Plex counts 0 to 10); 0 removes
+// the rating.
+func (p *plex) SetRating(ctx context.Context, id string, rating int) error {
+	key, _ := splitPlexID(id)
+	r := -1
+	if rating > 0 {
+		r = 2 * min(5, rating)
+	}
+	q := url.Values{"key": {key}, "identifier": {plexIdentifier}, "rating": {strconv.Itoa(r)}}
+	return p.get(ctx, http.MethodPut, "/:/rate?"+q.Encode(), nil)
+}
+
+// Scrobble marks the track as played (adds one to its play count).
+func (p *plex) Scrobble(ctx context.Context, id string, at time.Time) error {
+	key, _ := splitPlexID(id)
+	q := url.Values{"key": {key}, "identifier": {plexIdentifier}}
+	return p.get(ctx, http.MethodGet, "/:/scrobble?"+q.Encode(), nil)
+}
+
 // user es el id del usuario con la sesión iniciada.
 func (j *jellyfin) user() string {
 	j.mu.Lock()

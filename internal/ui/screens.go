@@ -918,7 +918,7 @@ func (a *App) drawProgress(dst *ebiten.Image, x, y, w int) {
 	bx := x + textWidth(cur, SmallFace) + 6
 	bw := w - (bx - x) - textWidth(tot, SmallFace) - 6
 	rect(dst, bx, y+1, bw, 3, th.Bg2)
-	fill := int(float64(bw) * a.shownPos / math.Max(a.duration, 1))
+	fill := min(bw, int(float64(bw)*a.shownPos/math.Max(a.duration, 1))) // never past the bar, even if the length was wrong
 	rect(dst, bx, y+1, fill, 3, th.Accent)
 	panel(dst, bx+fill-2, y-1, 5, 7, th.Text)
 	// Tocar la barra salta a ese punto.

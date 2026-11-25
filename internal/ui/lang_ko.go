@@ -525,7 +525,7 @@ func init() {
 		"srv_remove_q":      "%s 삭제할까요?",
 		"srv_retry":         "다시 시도",
 		"srv_save_anyway":   "그래도 저장",
-		"srv_sub":           "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":           "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_test":          "연결 테스트",
 		"srv_testing":       "%s 테스트 중...",
 		"srv_title":         "서버",

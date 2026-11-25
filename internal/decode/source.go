@@ -73,6 +73,14 @@ func Open(path string) (Source, error) {
 	if err != nil {
 		return nil, err
 	}
+	return OpenFile(f)
+}
+
+// OpenFile decodes the already open file f (its name chooses the decoder for
+// modules and MP3s without a header) and closes it if it can't. It is for a
+// file that must be opened in a special way: a song still downloading.
+func OpenFile(f *os.File) (Source, error) {
+	path := f.Name()
 	var magic [36]byte
 	n, _ := io.ReadFull(f, magic[:])
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -81,6 +89,7 @@ func Open(path string) (Source, error) {
 	}
 
 	var src Source
+	var err error
 	switch {
 	case n >= 4 && string(magic[:4]) == "fLaC", isID3FLAC(f, magic[:n]):
 		src, err = newFLAC(f)

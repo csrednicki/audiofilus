@@ -76,12 +76,12 @@ Audiofilus is free, with no ads or paywalls, and I make it in my spare time. If 
 - Search across the library, with an on-screen QWERTY keyboard.
 - The scan runs once and is cached; later runs only read new or changed files.
 - The interface colors come from the album cover.
-- **Liked songs and ratings** (1 to 5), synced with Subsonic/Navidrome and Jellyfin.
+- **Liked songs and ratings** (1 to 5), synced with Subsonic/Navidrome, Jellyfin and Plex.
 - **Smart playlists** that fill themselves from rules (most played, never played, recently added, by genre or year...), with ready-made ones.
 - **Edit tags** of songs and albums (MP3, FLAC, Ogg, Opus, M4A), **find missing covers** (Cover Art Archive, iTunes) and **fix albums from MusicBrainz**, or look up a single song's title, album, year and cover.
 - **Send to speakers and TVs** on your network (DLNA/UPnP and Chromecast), **share your library over DLNA** and **receive music** from phones and other DLNA apps.
 - **History:** Recent and Most played lists, and stats (plays, hours, top artists, albums and songs).
-- **Scrobbling** to Last.fm and ListenBrainz (queued while offline), and play counts on your Subsonic or Jellyfin server.
+- **Scrobbling** to Last.fm and ListenBrainz (queued while offline), and play counts on your Subsonic, Jellyfin or Plex server.
 - **Lyrics**, synced karaoke-style when available (each line tints as it's sung, and dots count down the instrumental parts): from a `.lrc` or `.txt` next to the song (or in a `lyrics` folder), from the file's tags (ID3 USLT and SYLT, `LYRICS` in FLAC and Ogg, `©lyr` in M4A), or found online on [LRCLIB](https://lrclib.net), also for radio stations that send the song title. Pick a different version from the list, nudge the timing, or turn online lookups off in Settings.
 
 <p align="center">
@@ -103,6 +103,7 @@ Audiofilus is free, with no ads or paywalls, and I make it in my spare time. If 
 |---|---|
 | **Subsonic / OpenSubsonic** (Navidrome and others) | Browse, stream, cache and download; edit their playlists |
 | **Jellyfin** | Same, with your Jellyfin user and its playlists |
+| **Plex** | Sign in with a code on plex.tv/link or your password; each music library is its own source. Ratings, favorites (5 stars) and plays go back to Plex; its playlists are read-only |
 | **Internet radio** | Stations from radio-browser.info by country or genre, with the live song title (ICY); Icecast/Shoutcast and HLS streams |
 | **Podcasts** | Top shows for your country, search, any RSS feed; downloads and resume; 30-second skips and speed without changing the pitch |
 | **Audiobooks** | `.m4b` files, files with the audiobook genre, or books in an `Audiobooks` folder (one file per chapter). It remembers where you were in each book even if music plays in between, shows chapters (`.m4b` and MP3), L1/R1 change chapter, ←/→ skip 30 seconds, and speed goes from 0.75× to 2× without changing the pitch |

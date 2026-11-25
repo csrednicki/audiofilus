@@ -100,7 +100,7 @@ func init() {
 		"snd_mid":           "Średnio",
 		"snd_high":          "Głośno",
 		"srv_title":         "Serwery",
-		"srv_sub":           "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":           "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_none":          "Brak",
 		"n_servers":         "Serwery: %d",
 		"n_servers_one":     "1 serwer",

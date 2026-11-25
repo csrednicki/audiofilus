@@ -20,6 +20,25 @@ func TestJellyfinLive(t *testing.T) {
 	liveServer(t, os.Getenv("AUDIOFILUS_JELLYFIN"), "jellyfin")
 }
 
+// TestPlexLive is the same against Plex (AUDIOFILUS_PLEX=token,machine,section),
+// once through the MP3 transcoder and once with the original file.
+func TestPlexLive(t *testing.T) {
+	srv, ok := livePlex()
+	if !ok {
+		t.Skip("set AUDIOFILUS_PLEX=token,machine,section")
+	}
+	liveCheck(t, srv)
+	srv.Quality = "original"
+	liveCheck(t, srv)
+}
+
+// livePlex is the Plex server entry from AUDIOFILUS_PLEX.
+func livePlex() (config.Server, bool) {
+	env := os.Getenv("AUDIOFILUS_PLEX")
+	parts := splitN(env, 3)
+	return config.Server{Name: "Prueba", Type: "plex", Password: parts[0], Machine: parts[1], Section: parts[2]}, env != ""
+}
+
 // liveServer prueba catálogo, escucha y portada contra el servidor de env
 // ("url,usuario,contraseña").
 func liveServer(t *testing.T, env, typ string) {
@@ -29,6 +48,11 @@ func liveServer(t *testing.T, env, typ string) {
 	var srv config.Server
 	parts := splitN(env, 3)
 	srv.Name, srv.Type, srv.URL, srv.User, srv.Password = "Prueba", typ, parts[0], parts[1], parts[2]
+	liveCheck(t, srv)
+}
+
+// liveCheck loads srv's catalog, downloads a song and a cover.
+func liveCheck(t *testing.T, srv config.Server) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	c := New(srv)
@@ -100,12 +124,16 @@ func splitN(s string, n int) []string {
 // catálogo la traiga marcada, la desmarca y cuenta una escucha (con
 // AUDIOFILUS_JELLYFIN o AUDIOFILUS_SUBSONIC; si no, se salta).
 func TestLiveUserData(t *testing.T) {
-	for _, c := range []struct{ env, typ string }{{os.Getenv("AUDIOFILUS_JELLYFIN"), "jellyfin"}, {os.Getenv("AUDIOFILUS_SUBSONIC"), ""}} {
+	plexSrv, plexOK := livePlex()
+	for _, c := range []struct{ env, typ string }{{os.Getenv("AUDIOFILUS_JELLYFIN"), "jellyfin"}, {os.Getenv("AUDIOFILUS_SUBSONIC"), ""}, {map[bool]string{true: "plex"}[plexOK], "plex"}} {
 		if c.env == "" {
 			continue
 		}
 		parts := splitN(c.env, 3)
 		srv := config.Server{Name: "Prueba", Type: c.typ, URL: parts[0], User: parts[1], Password: parts[2]}
+		if c.typ == "plex" {
+			srv = plexSrv
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		b := New(srv)
 		if err := b.Ping(ctx); err != nil {
@@ -137,7 +165,7 @@ func TestLiveUserData(t *testing.T) {
 		if err := b.SetFavorite(ctx, id, false); err != nil || starred() {
 			t.Errorf("%s: unstar failed (%v)", c.typ, err)
 		}
-		if c.typ == "" { // Jellyfin no valora
+		if c.typ != "jellyfin" { // Jellyfin no valora
 			if err := b.SetRating(ctx, id, 4); err != nil {
 				t.Fatalf("rating: %v", err)
 			}

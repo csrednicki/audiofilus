@@ -102,11 +102,18 @@ type Server struct {
 	// Name es como sale en la barra de pantallas; también nombra su caché.
 	Name string `json:"name"`
 	// Type es el protocolo: "subsonic" (vacío también) o "jellyfin" (también
-	// Emby).
-	Type     string `json:"type,omitempty"`
-	URL      string `json:"url"`
-	User     string `json:"user"`
+	// Emby), or "plex".
+	Type string `json:"type,omitempty"`
+	// URL is the server address; for Plex, the last connection that answered
+	// (used when plex.tv can't be reached).
+	URL  string `json:"url"`
+	User string `json:"user"`
+	// Password is the password; for Plex, the account token from plex.tv.
 	Password string `json:"password"`
+	// Machine and Section are, for Plex only, the server's clientIdentifier
+	// (to find its current addresses on plex.tv) and the music library key.
+	Machine string `json:"machine,omitempty"`
+	Section string `json:"section,omitempty"`
 	// Quality es lo que se pide al escuchar: "" (MP3 a 192 kbps: poco que
 	// bajar y lo más barato de decodificar), "original", o los kbps del MP3
 	// ("320", "128", "96").
