@@ -75,7 +75,7 @@ Icon=%s
 Terminal=false
 Categories=AudioVideo;Audio;Player;
 MimeType=%s;
-Keywords=music;player;mp3;flac;radio;podcast;subsonic;jellyfin;
+Keywords=music;player;mp3;flac;radio;podcast;subsonic;jellyfin;plex;
 StartupWMClass=%s
 Actions=PlayPause;Next;Previous;
 

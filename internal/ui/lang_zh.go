@@ -524,7 +524,7 @@ func init() {
 		"srv_remove_q":      "移除 %s？",
 		"srv_retry":         "重试",
 		"srv_save_anyway":   "仍然保存",
-		"srv_sub":           "Subsonic、Navidrome、Jellyfin...",
+		"srv_sub":           "Subsonic、Navidrome、Jellyfin、Plex...",
 		"srv_test":          "测试连接",
 		"srv_testing":       "正在测试 %s...",
 		"srv_title":         "服务器",

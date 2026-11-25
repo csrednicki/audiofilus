@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "要移除 %s 嗎？",
 		"srv_retry":           "重試",
 		"srv_save_anyway":     "仍然儲存",
-		"srv_sub":             "Subsonic、Navidrome、Jellyfin...",
+		"srv_sub":             "Subsonic、Navidrome、Jellyfin、Plex...",
 		"srv_test":            "測試連線",
 		"srv_testing":         "正在測試 %s...",
 		"srv_title":           "伺服器",

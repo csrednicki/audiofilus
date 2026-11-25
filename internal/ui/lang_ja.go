@@ -525,7 +525,7 @@ func init() {
 		"srv_remove_q":      "%s を削除?",
 		"srv_retry":         "もう一度試す",
 		"srv_save_anyway":   "このまま保存",
-		"srv_sub":           "Subsonic、Navidrome、Jellyfin...",
+		"srv_sub":           "Subsonic、Navidrome、Jellyfin、Plex...",
 		"srv_test":          "接続をテスト",
 		"srv_testing":       "%s をテスト中...",
 		"srv_title":         "サーバー",

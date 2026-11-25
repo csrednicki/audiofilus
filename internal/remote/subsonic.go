@@ -27,7 +27,7 @@ import (
 // con sal, 1.13+, y search3 vacío para sacar todo el catálogo).
 const apiVersion = "1.16.1"
 
-// Backend es un tipo de servidor: Subsonic (Client) o Jellyfin.
+// Backend es un tipo de servidor: Subsonic (Client), Jellyfin or Plex.
 type Backend interface {
 	// Ping comprueba la dirección, el usuario y la contraseña (en Jellyfin,
 	// además, inicia la sesión: las URL de abajo la necesitan).
@@ -55,6 +55,9 @@ type Backend interface {
 func New(srv config.Server) Backend {
 	if strings.EqualFold(srv.Type, "jellyfin") {
 		return newJellyfin(srv)
+	}
+	if strings.EqualFold(srv.Type, "plex") {
+		return newPlex(srv)
 	}
 	return &Client{srv: srv, http: &http.Client{Timeout: 60 * time.Second}}
 }

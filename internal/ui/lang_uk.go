@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "Прибрати %s?",
 		"srv_retry":           "Спробувати ще",
 		"srv_save_anyway":     "Усе одно зберегти",
-		"srv_sub":             "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":             "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_test":            "Перевірити з’єднання",
 		"srv_testing":         "Перевірка %s...",
 		"srv_title":           "Сервери",

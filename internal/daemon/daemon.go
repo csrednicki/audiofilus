@@ -255,8 +255,13 @@ func Run(paths config.Paths) error {
 			return s, true, nil
 		}
 		local, ready, err := store.Local(path)
-		if err != nil || !ready {
+		if err != nil {
 			return nil, false, err
+		}
+		if !ready {
+			// Still downloading: it starts as soon as the beginning is here.
+			src, ok := store.OpenPartial(path)
+			return src, ok, nil
 		}
 		src, err := decode.Open(local)
 		return src, err == nil, err

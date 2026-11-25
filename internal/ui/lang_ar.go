@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "إزالة %s؟",
 		"srv_retry":           "أعد المحاولة",
 		"srv_save_anyway":     "احفظ على أي حال",
-		"srv_sub":             "Subsonic، Navidrome، Jellyfin...",
+		"srv_sub":             "Subsonic، Navidrome، Jellyfin، Plex...",
 		"srv_test":            "اختبار الاتصال",
 		"srv_testing":         "جار اختبار %s...",
 		"srv_title":           "الخوادم",

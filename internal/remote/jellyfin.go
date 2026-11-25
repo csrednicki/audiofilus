@@ -208,13 +208,23 @@ func (j *jellyfin) AllSongs(ctx context.Context, progress func(Progress)) ([]Son
 	if err != nil {
 		return nil, err
 	}
-	pages := make([][]jfItem, (max(total, len(first))+jfPage-1)/jfPage)
+	return allPages(ctx, first, total, jfPage, func(ctx context.Context, p int) ([]jfItem, error) {
+		items, _, err := j.items(ctx, songsQuery(p*jfPage, false))
+		return items, err
+	}, progress)
+}
+
+// allPages fetches the rest of a catalog whose first page (of size items)
+// already arrived: the other pages go jfWorkers at a time, and progress hears
+// first the newest songs and then how many have arrived.
+func allPages[T interface{ song() Song }](ctx context.Context, first []T, total, size int, page func(ctx context.Context, p int) ([]T, error), progress func(Progress)) ([]Song, error) {
+	pages := make([][]T, (max(total, len(first))+size-1)/size)
 	if len(pages) == 0 {
 		return nil, nil
 	}
 	pages[0] = first
 	if len(pages) == 1 {
-		return jfSongs(pages, total), nil
+		return pageSongs(pages, total), nil
 	}
 	// progress va con candado: así quien lo pasa no tiene que cuidarse de
 	// los hilos.
@@ -228,7 +238,7 @@ func (j *jellyfin) AllSongs(ctx context.Context, progress func(Progress)) ([]Son
 			progress(Progress{Got: got, Total: total, First: first})
 		}
 	}
-	report(0, jfSongs(pages[:1], len(first)))
+	report(0, pageSongs(pages[:1], len(first)))
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	next := make(chan int)
@@ -239,7 +249,7 @@ func (j *jellyfin) AllSongs(ctx context.Context, progress func(Progress)) ([]Son
 		go func() {
 			defer wg.Done()
 			for p := range next {
-				items, _, err := j.items(ctx, songsQuery(p*jfPage, false))
+				items, err := page(ctx, p)
 				if err != nil {
 					errc <- err
 					cancel()
@@ -268,20 +278,21 @@ feed:
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return jfSongs(pages, total), nil
+	return pageSongs(pages, total), nil
 }
 
-// jfSongs junta las páginas en canciones ordenadas por álbum. Una canción
+// pageSongs junta las páginas en canciones ordenadas por álbum. Una canción
 // puede caer en dos páginas si la biblioteca cambia mientras tanto: se queda
 // la primera.
-func jfSongs(pages [][]jfItem, total int) []Song {
+func pageSongs[T interface{ song() Song }](pages [][]T, total int) []Song {
 	seen := make(map[string]bool, total)
 	out := make([]Song, 0, total)
 	for _, pg := range pages {
 		for _, it := range pg {
-			if !seen[it.ID] {
-				seen[it.ID] = true
-				out = append(out, it.song())
+			s := it.song()
+			if !seen[s.ID] {
+				seen[s.ID] = true
+				out = append(out, s)
 			}
 		}
 	}

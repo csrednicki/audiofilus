@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "%s हटाएँ?",
 		"srv_retry":           "फिर कोशिश करें",
 		"srv_save_anyway":     "फिर भी सेव करें",
-		"srv_sub":             "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":             "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_test":            "कनेक्शन जाँचें",
 		"srv_testing":         "%s जाँच रहे हैं...",
 		"srv_title":           "सर्वर",

@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "ลบ %s?",
 		"srv_retry":           "ลองอีกครั้ง",
 		"srv_save_anyway":     "บันทึกต่อไป",
-		"srv_sub":             "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":             "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_test":            "ทดสอบการเชื่อมต่อ",
 		"srv_testing":         "กำลังทดสอบ %s...",
 		"srv_title":           "เซิร์ฟเวอร์",

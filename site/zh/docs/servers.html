@@ -91,6 +91,10 @@ body { line-break: strict; }
 <p><strong>设置 → 服务器 → 添加服务器</strong>。选择类型（Subsonic/OpenSubsonic，涵盖 Navidrome、gonic、Airsonic 等；或 Jellyfin/Emby），然后输入名称、地址（<code>http://ip:port</code>）、用户名和密码。保存前会测试连接；如果没有响应，你可以重试、修改信息或仍然保存。</p>
 <p>每个服务器都会成为屏幕栏中的又一个音乐库，包含专辑、艺人、歌曲、歌单和搜索。它的目录会被保存，所以即使没有网络也能立即显示。</p>
 
+<h2 id="plex">Plex</h2>
+<p>选择 <strong>Plex</strong> 并登录：在手机上打开 <code>plex.tv/link</code> 输入代码，或用邮箱和密码登录（如果账户要求，还需输入验证码）。然后选择服务器和音乐资料库；每个资料库都会作为一个单独的服务器添加。Audiofilus 每次连接时都会在 plex.tv 上查找服务器，所以在家用局域网，在外用远程地址。</p>
+<p>Plex 只有评分，没有收藏：喜欢一首歌会给它 5 星，在 Plex 里 5 星的歌会显示为已喜欢。Plex 的歌单可以播放，但不能在 Audiofilus 里编辑。</p>
+
 <h2 id="options">单个服务器的选项</h2>
 <ul>
 <li><strong>收听音质</strong>：默认 192&nbsp;kbps 的 MP3（下载量小，解码开销低），也可选 320、128、96 或原始（不转码）。</li>

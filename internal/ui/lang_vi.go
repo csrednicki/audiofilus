@@ -689,7 +689,7 @@ func init() {
 		"srv_remove_q":        "Gỡ %s?",
 		"srv_retry":           "Thử lại",
 		"srv_save_anyway":     "Vẫn lưu",
-		"srv_sub":             "Subsonic, Navidrome, Jellyfin...",
+		"srv_sub":             "Subsonic, Navidrome, Jellyfin, Plex...",
 		"srv_test":            "Kiểm tra kết nối",
 		"srv_testing":         "Đang kiểm tra %s...",
 		"srv_title":           "Máy chủ",
