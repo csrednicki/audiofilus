@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -183,6 +184,11 @@ type UI struct {
 	// etiquetas (artista del álbum y álbum): cada carpeta con música es un
 	// álbum, con su nombre.
 	AlbumsByFolder bool `json:"albums_by_folder,omitempty"`
+	// Cassette muestra en el reproductor un casete con la portada de
+	// etiqueta, en vez de la portada con el vinilo asomando; Tape es su
+	// aspecto (Ajustes > Casete).
+	Cassette bool   `json:"cassette,omitempty"`
+	Tape     TapeUI `json:"tape,omitzero"`
 	// HiddenFormats son, por sección de la biblioteca ("songs", "albums",
 	// "artists", "folders"), las extensiones que no salen en ella ("mp3",
 	// "flac"...). Lo que no está, sale: un formato nuevo se ve.
@@ -220,6 +226,36 @@ type UI struct {
 	// normal); la música va siempre a la normal.
 	BookSpeed float64 `json:"book_speed,omitempty"`
 	RadioDir  string  `json:"radio_dir,omitempty"`
+}
+
+// TapeUI es el aspecto del casete del reproductor (Ajustes > Casete). Cada
+// valor cero es el de por defecto: un casete sin tocar no escribe nada.
+type TapeUI struct {
+	// Skin son sus colores: "" neón, o "black", "ocean", "lava", "toxic",
+	// "cyber", "vapor", "chrome", o "cover" (los cuatro colores más vivos
+	// de la portada).
+	Skin string `json:"skin,omitempty"`
+	// Label es lo que lleva pegado: "" la portada (el título escrito a mano
+	// si no hay), "hand" siempre el título escrito a mano.
+	Label string `json:"label,omitempty"`
+	// Paper es el color de la etiqueta detrás de la letra: "" el estampado
+	// del aspecto, o "white", "yellow", "navy", "pink", "purple", "green",
+	// "orange", "red".
+	Paper string `json:"paper,omitempty"`
+	// Thin escribe con el grosor normal en vez de en negrita.
+	Thin bool `json:"thin,omitempty"`
+	// HandSize es el tamaño de la letra en porcentaje; 0 es 100.
+	HandSize int `json:"hand_size,omitempty"`
+	// Glow es la luz de sus bordes: "" motas de polvo flotando, "static"
+	// fugas de luz quietas, "off" nada.
+	Glow string `json:"glow,omitempty"`
+	// GlowAnim mueve el resplandor: "" o "breathe" respira, "none" quieto,
+	// "orbit" (una luz que recorre el borde) o "beat" (con los graves).
+	GlowAnim string `json:"glow_anim,omitempty"`
+	// DustSize es el tamaño de las motas en porcentaje; 0 es 200.
+	DustSize int `json:"dust_size,omitempty"`
+	// NoReflection quita su reflejo en el suelo, debajo.
+	NoReflection bool `json:"no_reflection,omitempty"`
 }
 
 // Input elige el mando. Lo normal es dejarlo vacío: el mando y su mapeo salen
@@ -281,6 +317,18 @@ func Locate() (Paths, error) {
 			exe = real
 		}
 		base = filepath.Dir(exe)
+		// Inside Audiofilus.app the binary's folder is read-only (app
+		// translocation) and replaced on every update.
+		if runtime.GOOS == "darwin" && inAppBundle(base) {
+			dir, err := os.UserConfigDir()
+			if err != nil {
+				return Paths{}, err
+			}
+			base = filepath.Join(dir, "Audiofilus")
+			if err := os.MkdirAll(base, 0o755); err != nil {
+				return Paths{}, err
+			}
+		}
 	}
 	base, err := filepath.Abs(base)
 	if err != nil {
@@ -300,6 +348,11 @@ func Locate() (Paths, error) {
 		Log:    filepath.Join(data, "audiofilus.log"),
 		Socket: sock,
 	}, nil
+}
+
+// inAppBundle says whether dir is the Contents/MacOS folder of a macOS .app.
+func inAppBundle(dir string) bool {
+	return strings.HasSuffix(filepath.ToSlash(dir), ".app/Contents/MacOS")
 }
 
 // Resolve hace absoluta una ruta respecto a la carpeta del binario.

@@ -251,9 +251,10 @@ type App struct {
 	lastTrack   string
 	spin        float64 // ángulo del vinilo
 	spinVel     float64
-	konami      []Action // las últimas pulsaciones, por si son el código Konami (eggs.go)
-	celebrateAt float64  // cuándo empezó la celebración del día especial
-	shotDay     int      // en las capturas, el día especial que se finge
+	reels       cassetteReels // el giro de los carretes del casete (cassette.go)
+	konami      []Action      // las últimas pulsaciones, por si son el código Konami (eggs.go)
+	celebrateAt float64       // cuándo empezó la celebración del día especial
+	shotDay     int           // en las capturas, el día especial que se finge
 
 	theme    Theme
 	themeFor *Album   // el tema se tiñe con este álbum en cuanto se lea su portada
@@ -1688,7 +1689,10 @@ func (a *App) DrawFinalScreen(screen ebiten.FinalScreen, offscreen *ebiten.Image
 func rotatedGeoM(rot, sw, sh, ow, oh int) ebiten.GeoM {
 	fw, fh, w, h := float64(sw), float64(sh), float64(ow), float64(oh)
 	s := math.Min(fw/h, fh/w)
-	x, y := math.Floor((fw-h*s)/2), math.Floor((fh-w*s)/2)
+	// float64() redondea el producto: sin él, en arm64 Go lo junta con la
+	// resta en un FMA y, cuando el lienzo llena justo un lado, sale -4e-14 y
+	// Floor da -1 (un píxel fuera de la pantalla).
+	x, y := math.Floor((fw-float64(h*s))/2), math.Floor((fh-float64(w*s))/2)
 	var g ebiten.GeoM
 	if rot == rotLeft {
 		g.Rotate(math.Pi / 2)
@@ -1803,6 +1807,11 @@ func (a *App) requestShotCovers() {
 			a.libTab = tab
 			a.drawScreen(tmp, LibraryScreen)
 		}
+		// Y con el casete, que pide la portada a otro tamaño (su etiqueta).
+		cassette := a.cfg.UI.Cassette
+		a.cfg.UI.Cassette = true
+		a.drawScreen(tmp, NowPlaying)
+		a.cfg.UI.Cassette = cassette
 		tmp.Deallocate()
 	}
 	a.h = ScreenH
@@ -1833,6 +1842,14 @@ func (a *App) writeShots() error {
 	if err := shot("reproduciendo"); err != nil {
 		return err
 	}
+	// La misma con Ajustes → Casete (cassette.go); las demás, con lo que
+	// esté puesto.
+	cassette := a.cfg.UI.Cassette
+	a.cfg.UI.Cassette = true
+	if err := shot("reproduciendo-casete"); err != nil {
+		return err
+	}
+	a.cfg.UI.Cassette = cassette
 	// Con el temporizador puesto (y el corazón, si la canción es favorita en
 	// la maqueta).
 	a.status.TimerLeft = 25 * 60
@@ -1968,6 +1985,7 @@ func (a *App) writeShots() error {
 		{ID: "c", Title: "Rabbit Hole (Cowards, Pt. 1)", Artists: []string{"Chevelle"}, Album: "Bright as Blasphemy", Duration: "4:10"},
 		{ID: "d", Title: "Hats off to the Bull", Artists: []string{"Chevelle"}, Album: "Hats off to the Bull", Duration: "3:42"},
 	}
+	a.yt.albums = []ytm.Album{{ID: "MPREb_a", Title: "Wonder What's Next", Artist: "Chevelle", Year: "2002"}}
 	a.search.query, a.search.typing, a.search.lastQuery, a.search.sel = []rune("Chevelle"), false, "", 2
 	a.updateSearchResults()
 	tr := a.yt.tracks
@@ -1981,6 +1999,12 @@ func (a *App) writeShots() error {
 	if err := shot("buscar-youtube"); err != nil {
 		return err
 	}
+	// El menú de un álbum de YouTube Music.
+	a.ytAlbumMenu(ytAlbumDone{al: a.yt.albums[0], tracks: tr})
+	if err := shot("buscar-youtube-album"); err != nil {
+		return err
+	}
+	a.menu = nil
 	a.screen, a.yt.sel = Downloads, 1
 	if err := shot("descargas"); err != nil {
 		return err
@@ -2810,6 +2834,11 @@ func (a *App) tweenPosition() {
 	// El vinilo acompaña al salto: gira hacia ese lado lo que giraría
 	// sonando esos segundos (1,4 radianes por segundo), como si se arrastrara.
 	a.spin += d * 0.22 * vinylSpin
+	// Los carretes del casete también: la cinta corre hacia ese lado, como
+	// al adelantar o rebobinar.
+	if a.duration > 0 {
+		a.reels.turn(d*0.22*vinylSpin, a.shownPos/a.duration)
+	}
 }
 
 // vinylSpin es lo que gira el vinilo por segundo de canción (radianes).

@@ -290,6 +290,15 @@ var iconArt = map[string]string{
 ##...##
 .#####.
 ..###..`,
+	// tape es el icono del casete del reproductor (Ajustes → Casete).
+	"tape": `
+#########
+#.......#
+#.##.##.#
+#.......#
+#.#####.#
+##.....##
+#########`,
 	"user": `
 ..###..
 ..###..

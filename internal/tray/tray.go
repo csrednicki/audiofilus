@@ -6,7 +6,10 @@
 //
 // En Linux, con el estándar StatusNotifierItem por D-Bus (la barra de Omarchy,
 // Waybar, KDE, GNOME con AppIndicator; tray_linux.go); en Windows, en el área
-// de notificación (Shell_NotifyIcon; tray_windows.go). Lo común está aquí.
+// de notificación (Shell_NotifyIcon; tray_windows.go); en macOS, en la barra
+// de menús (tray_darwin.go), que además atiende las teclas multimedia, el
+// Centro de control (nowplaying_darwin.go) y los archivos abiertos desde el
+// Finder. Lo común está aquí.
 package tray
 
 import (
@@ -15,12 +18,14 @@ import (
 	"image/color"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/juanvillacortac/audiofilus/internal/desktop"
 	"github.com/juanvillacortac/audiofilus/internal/engine"
+	"github.com/juanvillacortac/audiofilus/internal/library"
 )
 
 // Options es lo que la bandeja necesita del servicio.
@@ -28,7 +33,10 @@ type Options struct {
 	Home   string      // AUDIOFILUS_HOME, para abrir la interfaz con la misma carpeta
 	UIOpen func() bool // si hay una interfaz conectada
 	Quit   func()      // salir del todo (como "Salir" en la interfaz)
-	Lang   string      // "es" o "en"
+	Lang   string      // el de la interfaz ("es", "pl"...); "" lo elige por $LANG
+	// Remote, si dice que sí, se quedó con la orden de las teclas multimedia
+	// (macOS): la interfaz manda la música a otro aparato (daemon/remote.go).
+	Remote func(cmd string) bool
 }
 
 // Los elementos del menú, en orden.
@@ -56,12 +64,9 @@ type base struct {
 func (b *base) nowPlaying() string {
 	st := b.eng.Status()
 	if st.Track.Path == "" {
-		return b.tr("Nada sonando", "Nothing playing")
+		return b.tr(sNothing)
 	}
-	s := st.Track.Title
-	if s == "" {
-		s = st.Track.Path[strings.LastIndexAny(st.Track.Path, `/\`)+1:]
-	}
+	s := title(st.Track)
 	if st.Track.Artist != "" {
 		s = st.Track.Artist + " — " + s
 	}
@@ -69,18 +74,47 @@ func (b *base) nowPlaying() string {
 		s = string(r[:59]) + "…"
 	}
 	if st.State != "playing" {
-		s += b.tr(" (en pausa)", " (paused)")
+		s += b.tr(sPaused)
 	}
 	return s
 }
 
-// tr elige el texto del idioma de la interfaz.
-func (b *base) tr(es, en string) string {
-	if b.opt.Lang == "en" || b.opt.Lang == "" && !strings.HasPrefix(os.Getenv("LANG"), "es") {
-		return en
+// title es el título de t o, si no tiene, el nombre del archivo.
+func title(t library.Track) string {
+	if t.Title != "" {
+		return t.Title
 	}
-	return es
+	return t.Path[strings.LastIndexAny(t.Path, `/\`)+1:]
 }
+
+// media hace una orden de las teclas multimedia ("resume", "pause",
+// "toggle", "next", "prev" o "seek" a pos segundos): a Remote si se la
+// queda, si no al motor. El salto va siempre al motor, como SetPosition de
+// MPRIS.
+func (b *base) media(cmd string, pos float64) {
+	if cmd == "seek" {
+		b.eng.SeekTo(pos)
+		return
+	}
+	if b.opt.Remote != nil && b.opt.Remote(cmd) {
+		return
+	}
+	switch cmd {
+	case "resume":
+		b.eng.Play()
+	case "pause":
+		b.eng.Pause()
+	case "toggle":
+		b.eng.Toggle()
+	case "next":
+		b.eng.Next()
+	case "prev":
+		b.eng.Prev()
+	}
+}
+
+// tr es el texto i del menú en el idioma de la interfaz (lang.go).
+func (b *base) tr(i int) string { return trayStrs[trayLang(b.opt.Lang)][i] }
 
 // label es el texto de un elemento del menú ("" en los separadores).
 func (b *base) label(id int) string {
@@ -89,19 +123,19 @@ func (b *base) label(id int) string {
 		return b.nowPlaying()
 	case idToggle:
 		if b.eng.Status().State == "playing" {
-			return b.tr("Pausar", "Pause")
+			return b.tr(sPause)
 		}
-		return b.tr("Reproducir", "Play")
+		return b.tr(sPlay)
 	case idNext:
-		return b.tr("Siguiente", "Next")
+		return b.tr(sNext)
 	case idPrev:
-		return b.tr("Anterior", "Previous")
+		return b.tr(sPrev)
 	case idShuffle:
-		return b.tr("Aleatorio", "Shuffle")
+		return b.tr(sShuffle)
 	case idOpen:
-		return b.tr("Abrir Audiofilus", "Open Audiofilus")
+		return b.tr(sOpen)
 	case idQuit:
-		return b.tr("Salir", "Quit")
+		return b.tr(sQuit)
 	}
 	return ""
 }
@@ -134,8 +168,10 @@ func (b *base) do(id int) (changed bool) {
 
 // open abre la interfaz (este mismo binario, sin argumentos), si no está ya
 // abierta, separada del servicio (detach, en cada sistema): es del usuario.
-func (b *base) open() {
-	if b.opt.UIOpen() {
+// Con files (abiertos desde el Finder) lanza "audiofilus <files>", que los
+// hace sonar y abre la interfaz si hace falta (cmd/audiofilus/open.go).
+func (b *base) open(files ...string) {
+	if len(files) == 0 && b.opt.UIOpen() {
 		return
 	}
 	exe, err := os.Executable()
@@ -143,7 +179,7 @@ func (b *base) open() {
 		log.Printf("tray: %v", err)
 		return
 	}
-	cmd := exec.Command(exe)
+	cmd := exec.Command(exe, files...)
 	cmd.Env = append(os.Environ(), "AUDIOFILUS_HOME="+b.opt.Home)
 	detach(cmd)
 	if err := cmd.Start(); err != nil {
@@ -166,6 +202,29 @@ func iconAt(size int) *image.NRGBA {
 		for x := 0; x < size; x++ {
 			c := color.NRGBAModel.Convert(src.At(r.Min.X+x*r.Dx()/size+r.Dx()/size/2, r.Min.Y+y*r.Dy()/size+r.Dy()/size/2))
 			out.Set(x, y, c)
+		}
+	}
+	return out
+}
+
+// monoIcon is the menu bar CD for macOS: one colour with transparency (a
+// template image, which macOS tints for light and dark bars), drawn on an
+// 18×18 grid like the pixel-art icon and scaled to size.
+func monoIcon(size int) *image.NRGBA {
+	const n = 18
+	out := image.NewNRGBA(image.Rect(0, 0, size, size))
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			gx, gy := float64(x*n/size)+0.5-n/2, float64(y*n/size)+0.5-n/2
+			r := math.Hypot(gx, gy)
+			a := math.Atan2(gy, gx) * 180 / math.Pi
+			on := r < 8.2 && // the disc
+				r > 1.8 && // the hole
+				(r < 3.2 || r > 4.2) && // around the hub
+				!(r > 5.6 && r < 6.6 && a > -150 && a < -110) // the glint
+			if on {
+				out.Set(x, y, color.NRGBA{A: 255})
+			}
 		}
 	}
 	return out
